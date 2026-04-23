@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Webhook Test{% endblock %}
+{% block heading %}Webhook Test{% endblock %}
+{% block content %}
+<div class="card" style="max-width:600px">
+  <h2>Test Webhook Endpoint</h2>
+  <p style="font-size:0.88rem;color:#666;margin-bottom:16px">Enter a URL to test if a delivery notification webhook endpoint is reachable.</p>
+  {% if error %}<div class="alert alert-error">Error: {{ error }}</div>{% endif %}
+  <form method="post">
+    <div class="form-group">
+      <label>Webhook URL</label>
+      <input type="text" name="url" placeholder="https://example.com/webhook" value="{{ request.form.get('url','') }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Test URL</button>
+  </form>
+  {% if result %}
+  <div style="margin-top:20px">
+    <h2 style="margin-bottom:10px">Response</h2>
+    <p><strong>Status:</strong> {{ result.status }}</p>
+    <p><strong>Content-Type:</strong> {{ result.content_type }}</p>
+    <p style="margin-top:8px"><strong>Body:</strong></p>
+    <pre style="background:#f4f4f4;padding:10px;border-radius:4px;font-size:0.8rem;overflow:auto;max-height:200px">{{ result.body }}</pre>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

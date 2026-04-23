@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block content %}
+<div class="stats">
+  <div class="stat"><div class="num">{{ total_orders }}</div><div class="label">Total Orders</div></div>
+  <div class="stat"><div class="num">{{ pending }}</div><div class="label">Pending</div></div>
+  <div class="stat"><div class="num">{{ total_users }}</div><div class="label">Customers</div></div>
+  <div class="stat"><div class="num">£{{ "%.2f"|format(revenue) }}</div><div class="label">Revenue</div></div>
+</div>
+<div class="card">
+  <h2>Quick Links</h2>
+  <p><a href="/orders" class="btn btn-primary">View All Orders</a>
+  <a href="/orders?status=pending" class="btn btn-primary" style="margin-left:8px">Pending Orders</a>
+  <a href="/export" class="btn btn-primary" style="margin-left:8px">Export CSV</a></p>
+</div>
+<div class="card">
+  <h2>System Info</h2>
+  <p style="font-size:0.85rem;color:#666">Grizzy's Gourmet Grub Internal Dashboard v1.2.0<br>
+  Running on port 8888 &bull; gary@grizzygourmetgrub.co.uk</p>
+</div>
+{% endblock %}

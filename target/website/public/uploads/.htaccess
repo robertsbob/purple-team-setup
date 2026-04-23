@@ -1,0 +1,3 @@
+# Uploaded files - no PHP execution
+# gary: added this so hackers cant upload php files haha
+php_flag engine off

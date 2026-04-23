@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ order.id }}{% endblock %}
+{% block heading %}Order #{{ order.id }}{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+  <div>
+    <div class="card">
+      <h2>Items</h2>
+      <table>
+        <thead><tr><th>Kit</th><th>Qty</th><th>Price</th></tr></thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.qty }}</td>
+            <td>£{{ "%.2f"|format(item.price) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <h2>Details</h2>
+      <p><strong>Customer:</strong> {{ order.username }}</p>
+      <p style="margin-top:6px"><strong>Email:</strong> {{ order.email }}</p>
+      <p style="margin-top:6px"><strong>Total:</strong> £{{ "%.2f"|format(order.total) }}</p>
+      <p style="margin-top:6px"><strong>Delivery:</strong> {{ order.delivery_date }}</p>
+      <p style="margin-top:6px"><strong>Address:</strong> {{ order.address }}</p>
+      <p style="margin-top:6px"><strong>Placed:</strong> {{ order.created_at.strftime('%d %b %Y %H:%M') }}</p>
+      <hr style="margin:14px 0;border-color:#eee">
+      <h2 style="margin-bottom:10px">Update Status</h2>
+      <form method="post" action="/orders/{{ order.id }}/status">
+        <div class="form-group">
+          <select name="status">
+            {% for s in ['pending','processing','shipped','delivered','cancelled'] %}
+              <option value="{{ s }}" {% if order.status == s %}selected{% endif %}>{{ s|title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-success btn-sm">Update</button>
+      </form>
+    </div>
+    <a href="/orders" class="btn btn-sm">← Back to Orders</a>
+  </div>
+</div>
+{% endblock %}
