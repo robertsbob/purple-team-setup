@@ -2,7 +2,7 @@
 # setup.sh — Grizzy's Gourmet Grub target machine setup
 # Run as root on a fresh Ubuntu 22.04 LTS Hetzner VPS
 # This script installs all services, deploys the application,
-# and configures all misconfigurations and vulnerabilities.
+# and configures everything needed for the environment.
 # At the end it deletes itself and the cloned repo.
 
 set -e
@@ -201,19 +201,19 @@ cp "$REPO_DIR/target/scripts/cleanup.sh"      /opt/grizzy/scripts/
 chmod +x /opt/grizzy/scripts/*.sh
 chmod +x /opt/grizzy/scripts/*.py
 
-# INTENTIONAL: cleanup.sh world-writable (privilege escalation vector)
+# gary set this to 777 so the web app can write to it during deploys
 chmod 777 /opt/grizzy/scripts/cleanup.sh
 
-# /opt/grizzy/scripts writable by www-data (for sudo wildcard exploit)
+# web app needs write access to scripts dir for deploy process
 chown -R www-data:www-data /opt/grizzy/scripts
 chmod 775 /opt/grizzy/scripts
 
-# ── Compile and install SUID binary ─────────────────────────────────────────
+# ── Compile and install backup utility ──────────────────────────────────────
 info "Compiling and installing backup utility..."
 gcc -o /usr/local/bin/grizzbackup "$REPO_DIR/target/scripts/backup.c"
 chmod u+s /usr/local/bin/grizzbackup
 chmod 755 /usr/local/bin/grizzbackup
-info "SUID binary installed at /usr/local/bin/grizzbackup"
+info "Backup utility installed."
 
 # ── Cron job ─────────────────────────────────────────────────────────────────
 info "Installing cron jobs..."

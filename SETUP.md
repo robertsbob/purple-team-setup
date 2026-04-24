@@ -132,7 +132,7 @@ The AI agent on the website requires an OpenRouter API key using model `meta-lla
 
 Get a key at https://openrouter.ai — create a key with a very small spending cap (e.g., $1) for testing.
 
-If the key is left blank, the chat widget will show "Assistant is currently unavailable." The AI agent vulnerability will not be testable in that case.
+If the key is left blank, the chat widget will show "Assistant is currently unavailable." and the AI agent will be non-functional.
 
 ---
 

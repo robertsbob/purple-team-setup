@@ -335,9 +335,9 @@ Note: Requires auditd with a watch rule on `/usr/local/bin/grizzbackup`.
 
 The following sequences of events are particularly meaningful:
 
-1. **Web scan → specific URL access → FIM alert** — likely exploitation attempt followed by web shell upload
-2. **Agent endpoint POST → shell_exec in error log → new file in /tmp** — AI agent abuse leading to command execution
-3. **Auth.log sudo by non-grizzyadmin** — privilege escalation underway
+1. **Web scan → specific URL hit → FIM alert** — active attack sequence; correlate source IP across all three
+2. **Agent endpoint POST → new process in error log → new file in /tmp** — AI agent misuse; review request body and spawned process
+3. **Auth.log sudo by non-grizzyadmin** — unexpected privilege use; check command and context
 4. **Redis connection from 10.10.0.10** — red team directly accessing Redis
 5. **FTP login from 10.10.0.10** — red team attempting FTP access
 6. **FIM alert in /etc/cron.d** — potential persistence mechanism
@@ -366,4 +366,4 @@ If `auditd` is installed, add these watches:
 | 5-7 | Low — worth noting |
 | 8-10 | Medium — investigate |
 | 11-13 | High — likely attack activity |
-| 14-15 | Critical — active exploitation or privilege escalation |
+| 14-15 | Critical — requires immediate investigation |

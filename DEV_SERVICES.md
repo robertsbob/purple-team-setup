@@ -99,6 +99,6 @@ Security monitoring agent. Reports to the Wazuh SIEM server.
 ## Notes
 
 - greg if you're reading this please stop logging into the server as root, use grizzyadmin
-- the uploads directory has an htaccess but i'm not 100% sure nginx reads it (it doesn't, nginx doesn't use htaccess)
+- the uploads directory has an htaccess for extra protection
 - TODO: set up SSL (letsencrypt) properly
-- TODO: move config out of web root
+- TODO: tidy up the config files

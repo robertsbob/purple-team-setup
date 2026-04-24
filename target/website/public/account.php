@@ -12,8 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
     $file = $_FILES['avatar'];
     $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
 
+    if ($file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE) {
+        $error = 'File too large (max 2MB).';
     // check the file type the browser says it is
-    if (!in_array($file['type'], $allowed_types)) {
+    } elseif (!in_array($file['type'], $allowed_types)) {
         $error = 'Only JPG, PNG and GIF images are allowed.';
     } elseif ($file['size'] > 2 * 1024 * 1024) {
         $error = 'File too large (max 2MB).';

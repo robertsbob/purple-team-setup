@@ -1,0 +1,5 @@
+.env.test
+*.test.conf
+test_output/
+__pycache__/
+*.pyc
