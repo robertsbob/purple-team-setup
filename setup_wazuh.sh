@@ -206,9 +206,11 @@ chmod 500 /etc/wazuh-dashboard/certs
 chmod 400 /etc/wazuh-dashboard/certs/*
 chown -R wazuh-dashboard:wazuh-dashboard /etc/wazuh-dashboard/certs
 
-# Configure indexer bind address
+# Configure indexer: bind address + single-node mode (prevents cluster election instability)
 NODE_IP="10.10.0.1"
 sed -i "s/0.0.0.0/$NODE_IP/" /etc/wazuh-indexer/opensearch.yml
+grep -q "discovery.type" /etc/wazuh-indexer/opensearch.yml \
+    || echo "discovery.type: single-node" >> /etc/wazuh-indexer/opensearch.yml
 
 systemctl daemon-reload
 systemctl enable wazuh-indexer
