@@ -191,6 +191,43 @@ info "Deploying public website..."
 cp -r "$REPO_DIR/target/website/public/." /var/www/grizzy/public/
 cp -r "$REPO_DIR/target/website/config/." /var/www/grizzy/config/
 
+# Generate placeholder food images (solid colour PNGs served as .jpg — browsers accept them)
+python3 - << 'PYEOF'
+import struct, zlib, os
+
+def make_png(width, height, rgb):
+    r, g, b = int(rgb[1:3],16), int(rgb[3:5],16), int(rgb[5:7],16)
+    def chunk(tag, data):
+        c = struct.pack('>I', len(data)) + tag + data
+        return c + struct.pack('>I', zlib.crc32(tag+data) & 0xffffffff)
+    raw = b''.join(b'\x00' + bytes([r,g,b]*width) for _ in range(height))
+    return (b'\x89PNG\r\n\x1a\n'
+            + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(raw))
+            + chunk(b'IEND', b''))
+
+images = {
+    'shakshuka.jpg':  '#C0522A',
+    'lamb_stew.jpg':  '#7A5230',
+    'thai_curry.jpg': '#C9A000',
+    'tikka.jpg':      '#C44B1A',
+    'burger.jpg':     '#6B3A1F',
+    'steak.jpg':      '#6B1A1A',
+    'salmon.jpg':     '#E07050',
+    'fishchips.jpg':  '#C8961E',
+    'jackfruit.jpg':  '#9B7A40',
+    'dahl.jpg':       '#C07030',
+    'risotto.jpg':    '#C8B080',
+    'aubergine.jpg':  '#4A2060',
+    'default.jpg':    '#888888',
+}
+dest = '/var/www/grizzy/public/assets/food'
+os.makedirs(dest, exist_ok=True)
+for name, colour in images.items():
+    with open(os.path.join(dest, name), 'wb') as f:
+        f.write(make_png(400, 300, colour))
+PYEOF
+
 # Inject OpenRouter key into .env
 sed -i "s/^OPENROUTER_KEY=.*/OPENROUTER_KEY=$OPENROUTER_KEY/" /var/www/grizzy/public/.env
 
