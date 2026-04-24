@@ -214,9 +214,20 @@ systemctl daemon-reload
 systemctl enable wazuh-indexer
 systemctl start wazuh-indexer
 
-info "Waiting for indexer to be ready..."
-sleep 60
-/usr/share/wazuh-indexer/bin/indexer-security-init.sh
+info "Waiting for indexer to be ready (this takes 2-4 minutes)..."
+TRIES=0
+until curl -sk -o /dev/null -w "%{http_code}" https://10.10.0.1:9200 | grep -qE "^[0-9]"; do
+    TRIES=$((TRIES + 1))
+    if [ $TRIES -ge 48 ]; then
+        warn "Indexer did not respond after 4 minutes — continuing anyway"
+        break
+    fi
+    sleep 5
+done
+# Give it 10 more seconds to fully settle before running security init
+sleep 10
+info "Running indexer security initialisation..."
+/usr/share/wazuh-indexer/bin/indexer-security-init.sh || warn "Security init returned non-zero — may already be initialised"
 
 # Configure manager
 sed -i "s/<address>.*<\/address>/<address>0.0.0.0<\/address>/" /var/ossec/etc/ossec.conf
@@ -389,8 +400,11 @@ WAZUHRULES
 systemctl restart wazuh-manager
 
 # ── Dashboard startup ─────────────────────────────────────────────────────────
+info "Starting Wazuh dashboard (may take a minute to become ready)..."
 systemctl enable wazuh-dashboard
 systemctl start wazuh-dashboard
+# Dashboard takes ~90s to fully load after start — this is normal
+sleep 15
 
 # ── Firewall for Wazuh server ────────────────────────────────────────────────
 info "Applying firewall rules for Wazuh server..."
