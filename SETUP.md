@@ -6,7 +6,7 @@ Two Hetzner machines required:
 1. **Wazuh server** — also acts as the WireGuard VPN server
 2. **Target machine** — runs the vulnerable application stack
 
-Both machines should be Ubuntu 22.04 LTS. Recommended specs: 4 vCPU, 8 GB RAM, 80 GB SSD.
+Both machines should be Ubuntu 24.04 LTS. Recommended specs: 4 vCPU, 8 GB RAM, 80 GB SSD.
 
 ---
 
@@ -72,7 +72,8 @@ You will be prompted for:
 | WireGuard server public key | From Step 2 output |
 | WireGuard private key (for this machine) | From Step 2 output |
 | OpenRouter API key | Your capped API key (or leave blank to disable AI agent) |
-| VNC password | Choose any password (min 6 chars) — give to blue team |
+| Enable GUI / VNC? | `y` to install XFCE desktop + TigerVNC; `n` to skip |
+| VNC password | (Only prompted if GUI enabled) — give to blue team |
 | Wazuh manager IP | `10.10.0.1` (press Enter for default) |
 
 The script will:
@@ -99,7 +100,7 @@ cat /root/setup_output/blue_team_ssh_key
 **Blue team receives:**
 - `blueteam_player.conf` (WireGuard)
 - `blue_team_ssh_key` (SSH private key)
-- VNC password (from Step 3)
+- VNC password (from Step 3, if GUI was enabled)
 - `BLUE_ACCESS.md` (from this repository)
 
 ---

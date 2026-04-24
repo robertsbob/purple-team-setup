@@ -48,12 +48,15 @@ ssh -i /path/to/blue_team_ssh_key grizzyadmin@10.10.0.2
 
 ## GUI / VNC Access
 
-A VNC server runs on the target machine (accessible only from WireGuard).
+GUI and VNC access is optional — it depends on whether the graphical desktop was
+enabled when the target machine was set up. Check the setup output to confirm.
+
+If enabled, a VNC server is running on the target machine (accessible only from WireGuard).
 
 ```
 Host:   10.10.0.2
 Port:   5901
-Password: (set during setup — see SETUP.md output)
+Password: (set during setup — see setup script output)
 ```
 
 Connect with any VNC client (e.g., TigerVNC, RealVNC Viewer):
@@ -61,7 +64,9 @@ Connect with any VNC client (e.g., TigerVNC, RealVNC Viewer):
 10.10.0.2:5901
 ```
 
-The VNC session runs as `grizzyadmin` and provides a full desktop environment.
+The VNC session runs as `grizzyadmin` and provides a full XFCE desktop environment.
+
+If VNC was not enabled during setup, this section does not apply.
 
 ---
 
@@ -80,7 +85,7 @@ See the Wazuh server SETUP output for the admin password.
 ## Engagement Rules
 
 - The red team player's WireGuard IP is `10.10.0.10`
-- SSH (`grizzyadmin`) and VNC access paths are **not** part of the engagement and must not be targeted by the red team (agreed by both teams)
+- SSH (`grizzyadmin`) and VNC access paths (if VNC was enabled) are **not** part of the engagement and must not be targeted by the red team (agreed by both teams)
 - The red team will use only WireGuard IPs for all activity
 - The exercise window is agreed separately between both teams
 
@@ -90,7 +95,7 @@ See the Wazuh server SETUP output for the admin password.
 
 | Account | Where | Purpose |
 |---------|-------|---------|
-| `grizzyadmin` | Target SSH/VNC | Blue team admin access |
+| `grizzyadmin` | Target SSH / VNC (if enabled) | Blue team admin access |
 | `gary` | FTP | Developer FTP (part of target environment) |
 | `admin` | Internal dashboard (port 8888) | Internal tool access |
 | `greg_grizzy` / `gary_dev` | Website customer accounts | Seed accounts |

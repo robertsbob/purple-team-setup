@@ -1,6 +1,6 @@
 #!/bin/bash
 # setup.sh — Grizzy's Gourmet Grub target machine setup
-# Run as root on a fresh Ubuntu 22.04 LTS Hetzner VPS
+# Run as root on a fresh Ubuntu 24.04 LTS Hetzner VPS
 # This script installs all services, deploys the application,
 # and configures everything needed for the environment.
 # At the end it deletes itself and the cloned repo.
@@ -36,8 +36,13 @@ read -r WG_PRIV_KEY
 prompt "Enter the OpenRouter API key (leave blank to skip — AI agent will show unavailable message):"
 read -r OPENROUTER_KEY
 
-prompt "Enter a VNC password for the blue team GUI access (min 6 chars):"
-read -r VNC_PASS
+prompt "Enable graphical desktop and VNC access for blue team? (y/n):"
+read -r ENABLE_GUI
+
+if [[ "$ENABLE_GUI" =~ ^[Yy] ]]; then
+    prompt "Enter a VNC password for the blue team GUI access (min 6 chars):"
+    read -r VNC_PASS
+fi
 
 prompt "Enter the Wazuh manager IP (same as WireGuard server, usually 10.10.0.1):"
 read -r WAZUH_IP; WAZUH_IP="${WAZUH_IP:-10.10.0.1}"
@@ -55,7 +60,7 @@ apt-get upgrade -y -qq
 info "Installing packages..."
 apt-get install -y -qq \
     nginx \
-    php8.1 php8.1-fpm php8.1-mysql php8.1-curl php8.1-mbstring php8.1-xml php8.1-zip \
+    php8.3 php8.3-fpm php8.3-mysql php8.3-curl php8.3-mbstring php8.3-xml php8.3-zip \
     mysql-server \
     redis-server \
     vsftpd \
@@ -64,12 +69,17 @@ apt-get install -y -qq \
     wireguard \
     iptables iptables-persistent \
     openssh-server \
-    tigervnc-standalone-server tigervnc-common \
-    xfce4 xfce4-terminal \
     fail2ban \
     curl wget git jq \
     net-tools \
     auditd
+
+if [[ "$ENABLE_GUI" =~ ^[Yy] ]]; then
+    info "Installing desktop and VNC packages..."
+    apt-get install -y -qq \
+        tigervnc-standalone-server tigervnc-common \
+        xfce4 xfce4-terminal
+fi
 
 # ── Blue team admin user ─────────────────────────────────────────────────────
 info "Creating blue team admin user..."
@@ -265,10 +275,10 @@ systemctl restart nginx
 # ── PHP-FPM config ───────────────────────────────────────────────────────────
 info "Configuring PHP..."
 # Pass OpenRouter key as environment variable
-cat >> /etc/php/8.1/fpm/pool.d/www.conf << EOF
+cat >> /etc/php/8.3/fpm/pool.d/www.conf << EOF
 env[OPENROUTER_KEY] = "$OPENROUTER_KEY"
 EOF
-systemctl restart php8.1-fpm
+systemctl restart php8.3-fpm
 
 # ── Sudo misconfiguration ────────────────────────────────────────────────────
 info "Configuring sudo rules..."
@@ -304,21 +314,22 @@ systemctl start wg-quick@wg0
 info "Applying firewall rules..."
 bash "$REPO_DIR/target/configs/iptables.sh"
 
-# ── VNC setup ────────────────────────────────────────────────────────────────
-info "Configuring VNC for blue team..."
-mkdir -p /home/grizzyadmin/.vnc
-echo "$VNC_PASS" | tigervncpasswd -f > /home/grizzyadmin/.vnc/passwd
-chmod 600 /home/grizzyadmin/.vnc/passwd
-chown -R grizzyadmin:grizzyadmin /home/grizzyadmin/.vnc
+# ── VNC setup (optional) ─────────────────────────────────────────────────────
+if [[ "$ENABLE_GUI" =~ ^[Yy] ]]; then
+    info "Configuring VNC for blue team..."
+    mkdir -p /home/grizzyadmin/.vnc
+    echo "$VNC_PASS" | tigervncpasswd -f > /home/grizzyadmin/.vnc/passwd
+    chmod 600 /home/grizzyadmin/.vnc/passwd
+    chown -R grizzyadmin:grizzyadmin /home/grizzyadmin/.vnc
 
-cat > /home/grizzyadmin/.vnc/xstartup << 'EOF'
+    cat > /home/grizzyadmin/.vnc/xstartup << 'EOF'
 #!/bin/bash
 export XDG_SESSION_TYPE=x11
 exec startxfce4
 EOF
-chmod +x /home/grizzyadmin/.vnc/xstartup
+    chmod +x /home/grizzyadmin/.vnc/xstartup
 
-cat > /etc/systemd/system/vncserver@.service << 'EOF'
+    cat > /etc/systemd/system/vncserver@.service << 'EOF'
 [Unit]
 Description=TigerVNC server
 After=network.target
@@ -335,9 +346,11 @@ ExecStop=/usr/bin/vncserver -kill :%i
 [Install]
 WantedBy=multi-user.target
 EOF
-systemctl daemon-reload
-systemctl enable vncserver@1
-systemctl start vncserver@1
+    systemctl daemon-reload
+    systemctl enable vncserver@1
+    systemctl start vncserver@1
+    info "VNC configured on port 5901."
+fi
 
 # ── Wazuh agent ──────────────────────────────────────────────────────────────
 info "Installing Wazuh agent..."
@@ -386,7 +399,9 @@ echo -e "${GREEN}============================================================${N
 echo ""
 echo "  WireGuard IP (this machine): $TARGET_WG_IP"
 echo "  Blue team SSH key:  /root/setup_output/blue_team_ssh_key"
+if [[ "$ENABLE_GUI" =~ ^[Yy] ]]; then
 echo "  VNC password:       $VNC_PASS  (port 5901)"
+fi
 echo "  Wazuh agent:        reporting to $WAZUH_IP"
 echo ""
 echo "  Docs left on machine:"

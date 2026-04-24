@@ -9,7 +9,7 @@ It's mostly for me (Gary) so I don't forget stuff, but Greg might read it too.
 
 ## Server
 
-Single VPS on Hetzner. Ubuntu 22.04 LTS. 4 vCPU, 8GB RAM, 80GB SSD.
+Single VPS on Hetzner. Ubuntu 24.04 LTS. 4 vCPU, 8GB RAM, 80GB SSD.
 
 ---
 
@@ -17,7 +17,7 @@ Single VPS on Hetzner. Ubuntu 22.04 LTS. 4 vCPU, 8GB RAM, 80GB SSD.
 
 ### 1. Public Website (Grizzy's Gourmet Grub)
 
-The main customer-facing site. Runs on PHP 8.1 with nginx.
+The main customer-facing site. Runs on PHP 8.3 with nginx.
 
 - Web root: `/var/www/grizzy/public`
 - Config: `/var/www/grizzy/config/`
