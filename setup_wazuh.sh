@@ -1,6 +1,6 @@
 #!/bin/bash
 # setup_wazuh.sh — Wazuh SIEM + WireGuard VPN server setup
-# Run as root on a fresh Ubuntu 22.04 LTS Hetzner VPS
+# Run as root on a fresh Ubuntu 24.04 LTS Hetzner VPS
 # This machine acts as both the Wazuh manager and WireGuard VPN server.
 
 set -e
@@ -15,7 +15,7 @@ if [[ $EUID -ne 0 ]]; then echo "Run as root." && exit 1; fi
 info "Wazuh SIEM + WireGuard VPN Server Setup"
 echo "========================================="
 
-prompt "Enter this machine's PUBLIC IP address (for WireGuard endpoint):"
+prompt "Enter this machine's IP address (public or local — used as the WireGuard endpoint):"
 read -r PUBLIC_IP
 
 echo ""
@@ -166,13 +166,45 @@ EOF
 
 bash wazuh-certs-tool.sh -A
 
-# Configure indexer
+# Deploy indexer certificates
+mkdir -p /etc/wazuh-indexer/certs
+tar -xf ./wazuh-certificates.tar -C /etc/wazuh-indexer/certs/ \
+    ./node-1.pem ./node-1-key.pem ./admin.pem ./admin-key.pem ./root-ca.pem
+mv /etc/wazuh-indexer/certs/node-1.pem     /etc/wazuh-indexer/certs/indexer.pem
+mv /etc/wazuh-indexer/certs/node-1-key.pem /etc/wazuh-indexer/certs/indexer-key.pem
+chmod 500 /etc/wazuh-indexer/certs
+chmod 400 /etc/wazuh-indexer/certs/*
+chown -R wazuh-indexer:wazuh-indexer /etc/wazuh-indexer/certs
+
+# Deploy filebeat certificates (used by wazuh-manager to ship to indexer)
+mkdir -p /etc/filebeat/certs
+tar -xf ./wazuh-certificates.tar -C /etc/filebeat/certs/ \
+    ./wazuh-1.pem ./wazuh-1-key.pem ./root-ca.pem
+mv /etc/filebeat/certs/wazuh-1.pem     /etc/filebeat/certs/filebeat.pem
+mv /etc/filebeat/certs/wazuh-1-key.pem /etc/filebeat/certs/filebeat-key.pem
+chmod 500 /etc/filebeat/certs
+chmod 400 /etc/filebeat/certs/*
+chown -R root:root /etc/filebeat/certs
+
+# Deploy dashboard certificates
+mkdir -p /etc/wazuh-dashboard/certs
+tar -xf ./wazuh-certificates.tar -C /etc/wazuh-dashboard/certs/ \
+    ./dashboard.pem ./dashboard-key.pem ./root-ca.pem
+chmod 500 /etc/wazuh-dashboard/certs
+chmod 400 /etc/wazuh-dashboard/certs/*
+chown -R wazuh-dashboard:wazuh-dashboard /etc/wazuh-dashboard/certs
+
+# Configure indexer bind address
 NODE_IP="10.10.0.1"
 sed -i "s/0.0.0.0/$NODE_IP/" /etc/wazuh-indexer/opensearch.yml
 
 systemctl daemon-reload
 systemctl enable wazuh-indexer
 systemctl start wazuh-indexer
+
+info "Waiting for indexer to be ready..."
+sleep 60
+/usr/share/wazuh-indexer/bin/indexer-security-init.sh
 
 # Configure manager
 sed -i "s/<address>.*<\/address>/<address>0.0.0.0<\/address>/" /var/ossec/etc/ossec.conf

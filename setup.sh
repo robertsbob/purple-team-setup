@@ -27,10 +27,10 @@ read -r TARGET_WG_IP; TARGET_WG_IP="${TARGET_WG_IP:-10.10.0.2}"
 prompt "Enter the WireGuard server public IP (Wazuh machine):"
 read -r WG_SERVER_IP
 
-prompt "Enter the WireGuard server public key (from generate_configs.sh output):"
+prompt "Enter the WireGuard server public key (printed at end of setup_wazuh.sh output):"
 read -r WG_SERVER_PUBKEY
 
-prompt "Enter the WireGuard private key for this machine (from generate_configs.sh output):"
+prompt "Enter the WireGuard private key for this machine (printed at end of setup_wazuh.sh output):"
 read -r WG_PRIV_KEY
 
 prompt "Enter the OpenRouter API key (leave blank to skip — AI agent will show unavailable message):"
