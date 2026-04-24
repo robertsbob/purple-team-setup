@@ -308,7 +308,7 @@ PersistentKeepalive = 25
 EOF
 chmod 600 /etc/wireguard/wg0.conf
 systemctl enable wg-quick@wg0
-systemctl start wg-quick@wg0
+systemctl restart wg-quick@wg0
 
 # ── Firewall ─────────────────────────────────────────────────────────────────
 info "Applying firewall rules..."

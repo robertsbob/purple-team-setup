@@ -80,7 +80,7 @@ echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/99-wireguard.conf
 sysctl -p /etc/sysctl.d/99-wireguard.conf
 
 systemctl enable wg-quick@wg0
-systemctl start wg-quick@wg0
+systemctl restart wg-quick@wg0
 
 # Write target machine config
 cat > /root/wg_configs_output/target_wg0.conf << EOF
@@ -100,7 +100,6 @@ cat > /root/wg_configs_output/redteam_player.conf << EOF
 [Interface]
 Address    = 10.10.0.10/24
 PrivateKey = $RED_PRIV
-DNS        = 1.1.1.1
 
 [Peer]
 PublicKey  = $SERVER_PUB
@@ -114,7 +113,6 @@ cat > /root/wg_configs_output/blueteam_player.conf << EOF
 [Interface]
 Address    = 10.10.0.20/24
 PrivateKey = $BLUE_PRIV
-DNS        = 1.1.1.1
 
 [Peer]
 PublicKey  = $SERVER_PUB
