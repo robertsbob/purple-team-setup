@@ -147,6 +147,7 @@ apt-get install -y wazuh-dashboard
 
 # Run Wazuh installer certificates generation
 info "Generating Wazuh certificates..."
+rm -rf ./wazuh-certificates ./wazuh-certificates.tar
 curl -sO https://packages.wazuh.com/4.7/wazuh-certs-tool.sh
 curl -sO https://packages.wazuh.com/4.7/config.yml
 
