@@ -64,7 +64,7 @@ apt-get install -y -qq \
     mysql-server \
     redis-server \
     vsftpd \
-    python3 python3-pip python3-venv \
+    python3 python3-pip python3-venv python3-pil fonts-dejavu-core \
     gcc \
     wireguard \
     iptables iptables-persistent \
@@ -191,41 +191,81 @@ info "Deploying public website..."
 cp -r "$REPO_DIR/target/website/public/." /var/www/grizzy/public/
 cp -r "$REPO_DIR/target/website/config/." /var/www/grizzy/config/
 
-# Generate placeholder food images (solid colour PNGs served as .jpg — browsers accept them)
+# Generate product food images (styled cards with gradient + name)
 python3 - << 'PYEOF'
-import struct, zlib, os
+from PIL import Image, ImageDraw, ImageFont
+import os
 
-def make_png(width, height, rgb):
-    r, g, b = int(rgb[1:3],16), int(rgb[3:5],16), int(rgb[5:7],16)
-    def chunk(tag, data):
-        c = struct.pack('>I', len(data)) + tag + data
-        return c + struct.pack('>I', zlib.crc32(tag+data) & 0xffffffff)
-    raw = b''.join(b'\x00' + bytes([r,g,b]*width) for _ in range(height))
-    return (b'\x89PNG\r\n\x1a\n'
-            + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
-            + chunk(b'IDAT', zlib.compress(raw))
-            + chunk(b'IEND', b''))
+def hex2rgb(h):
+    return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))
 
-images = {
-    'shakshuka.jpg':  '#C0522A',
-    'lamb_stew.jpg':  '#7A5230',
-    'thai_curry.jpg': '#C9A000',
-    'tikka.jpg':      '#C44B1A',
-    'burger.jpg':     '#6B3A1F',
-    'steak.jpg':      '#6B1A1A',
-    'salmon.jpg':     '#E07050',
-    'fishchips.jpg':  '#C8961E',
-    'jackfruit.jpg':  '#9B7A40',
-    'dahl.jpg':       '#C07030',
-    'risotto.jpg':    '#C8B080',
-    'aubergine.jpg':  '#4A2060',
-    'default.jpg':    '#888888',
-}
+def make_card(path, title, subtitle, top_hex, bot_hex):
+    W, H = 400, 300
+    top, bot = hex2rgb(top_hex), hex2rgb(bot_hex)
+    img = Image.new('RGB', (W, H))
+    draw = ImageDraw.Draw(img)
+    # Vertical gradient
+    for y in range(H):
+        t = y / (H - 1)
+        c = tuple(int(top[i] + (bot[i] - top[i]) * t) for i in range(3))
+        draw.line([(0, y), (W - 1, y)], fill=c)
+    # Subtle diagonal texture lines
+    for i in range(-H, W + H, 24):
+        draw.line([(i, 0), (i + H, H)], fill=tuple(min(255, c + 18) for c in bot), width=1)
+    # Dark band across lower third for legibility
+    band_y = H * 3 // 5
+    region = img.crop((0, band_y, W, H))
+    dark   = Image.new('RGB', (W, H - band_y), (0, 0, 0))
+    img.paste(Image.blend(region, dark, 0.62), (0, band_y))
+    draw = ImageDraw.Draw(img)
+    # Try system bold fonts
+    font_title = font_sub = None
+    for p in [
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+        '/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf',
+        '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf',
+    ]:
+        if os.path.exists(p):
+            font_title = ImageFont.truetype(p, 26)
+            font_sub   = ImageFont.truetype(p, 13)
+            break
+    if font_title is None:
+        font_title = font_sub = ImageFont.load_default()
+    # Title centred in dark band
+    tb = draw.textbbox((0, 0), title, font=font_title)
+    tx = (W - (tb[2] - tb[0])) // 2
+    ty = band_y + 18
+    draw.text((tx + 1, ty + 1), title,    fill=(0, 0, 0),       font=font_title)
+    draw.text((tx,     ty),     title,    fill=(255, 255, 255),  font=font_title)
+    # Subtitle (prep time / serves)
+    sb = draw.textbbox((0, 0), subtitle, font=font_sub)
+    sx = (W - (sb[2] - sb[0])) // 2
+    sy = ty + (tb[3] - tb[1]) + 8
+    draw.text((sx, sy), subtitle, fill=(210, 210, 210), font=font_sub)
+    img.save(path, 'JPEG', quality=88)
+
 dest = '/var/www/grizzy/public/assets/food'
 os.makedirs(dest, exist_ok=True)
-for name, colour in images.items():
-    with open(os.path.join(dest, name), 'wb') as f:
-        f.write(make_png(400, 300, colour))
+
+cards = [
+    ('shakshuka.jpg',  'Smoky Shakshuka Kit',          'Vegetarian  •  25 mins  •  Serves 2',  '#D4622A', '#6B2000'),
+    ('lamb_stew.jpg',  'Peak District Lamb Stew',      'Meat  •  2.5 hrs  •  Serves 2',        '#8B5520', '#3A1800'),
+    ('thai_curry.jpg', 'Thai Green Curry',              'Meat  •  30 mins  •  Serves 2',        '#4A8A1A', '#1A4800'),
+    ('aubergine.jpg',  'Roasted Aubergine Pasta',       'Vegetarian  •  35 mins  •  Serves 2',  '#7030A0', '#2A0848'),
+    ('tikka.jpg',      'Paneer Tikka Masala',           'Vegetarian  •  40 mins  •  Serves 2',  '#C84818', '#600800'),
+    ('salmon.jpg',     'Harissa Salmon Tray Bake',      'Fish  •  25 mins  •  Serves 2',        '#D07040', '#701800'),
+    ('burger.jpg',     'Sheffield Street Burger',       'Meat  •  30 mins  •  Serves 2',        '#8B5010', '#402000'),
+    ('risotto.jpg',    'Mushroom Risotto',              'Vegetarian  •  40 mins  •  Serves 2',  '#907050', '#403020'),
+    ('jackfruit.jpg',  'BBQ Pulled Jackfruit Tacos',    'Vegan  •  45 mins  •  Serves 2',       '#A06820', '#502800'),
+    ('fishchips.jpg',  'Classic Fish & Chips',          'Fish  •  35 mins  •  Serves 2',        '#C8A010', '#605000'),
+    ('dahl.jpg',       'Vegan Dahl',                    'Vegan  •  30 mins  •  Serves 2',       '#C87020', '#603000'),
+    ('steak.jpg',      'Steak Night Kit',               'Meat  •  25 mins  •  Serves 2',        '#902020', '#400000'),
+    ('default.jpg',    "Grizzy's Gourmet Grub",         'Fresh  •  Delivered weekly',           '#2A5A30', '#102018'),
+]
+for filename, title, subtitle, top, bot in cards:
+    make_card(os.path.join(dest, filename), title, subtitle, top, bot)
+    print(f'  {filename}')
 PYEOF
 
 # Inject OpenRouter key into .env
