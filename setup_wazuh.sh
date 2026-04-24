@@ -167,30 +167,43 @@ EOF
 
 bash wazuh-certs-tool.sh -A
 
+# Locate generated certs — tool outputs either a tar or a directory depending on version
+if [ -f ./wazuh-certificates.tar ]; then
+    mkdir -p ./wazuh-certs-work
+    tar -xf ./wazuh-certificates.tar -C ./wazuh-certs-work
+    CERTS=$(find ./wazuh-certs-work -name "root-ca.pem" -exec dirname {} \; | head -1)
+elif [ -d ./wazuh-certificates ]; then
+    CERTS=./wazuh-certificates
+else
+    echo "ERROR: wazuh-certs-tool.sh produced no output. Check logs above." && exit 1
+fi
+info "Certificates found at: $CERTS"
+
 # Deploy indexer certificates
 mkdir -p /etc/wazuh-indexer/certs
-tar -xf ./wazuh-certificates.tar -C /etc/wazuh-indexer/certs/ \
-    ./node-1.pem ./node-1-key.pem ./admin.pem ./admin-key.pem ./root-ca.pem
-mv /etc/wazuh-indexer/certs/node-1.pem     /etc/wazuh-indexer/certs/indexer.pem
-mv /etc/wazuh-indexer/certs/node-1-key.pem /etc/wazuh-indexer/certs/indexer-key.pem
+cp "$CERTS/node-1.pem"     /etc/wazuh-indexer/certs/indexer.pem
+cp "$CERTS/node-1-key.pem" /etc/wazuh-indexer/certs/indexer-key.pem
+cp "$CERTS/admin.pem"      /etc/wazuh-indexer/certs/admin.pem
+cp "$CERTS/admin-key.pem"  /etc/wazuh-indexer/certs/admin-key.pem
+cp "$CERTS/root-ca.pem"    /etc/wazuh-indexer/certs/root-ca.pem
 chmod 500 /etc/wazuh-indexer/certs
 chmod 400 /etc/wazuh-indexer/certs/*
 chown -R wazuh-indexer:wazuh-indexer /etc/wazuh-indexer/certs
 
 # Deploy filebeat certificates (used by wazuh-manager to ship to indexer)
 mkdir -p /etc/filebeat/certs
-tar -xf ./wazuh-certificates.tar -C /etc/filebeat/certs/ \
-    ./wazuh-1.pem ./wazuh-1-key.pem ./root-ca.pem
-mv /etc/filebeat/certs/wazuh-1.pem     /etc/filebeat/certs/filebeat.pem
-mv /etc/filebeat/certs/wazuh-1-key.pem /etc/filebeat/certs/filebeat-key.pem
+cp "$CERTS/wazuh-1.pem"     /etc/filebeat/certs/filebeat.pem
+cp "$CERTS/wazuh-1-key.pem" /etc/filebeat/certs/filebeat-key.pem
+cp "$CERTS/root-ca.pem"     /etc/filebeat/certs/root-ca.pem
 chmod 500 /etc/filebeat/certs
 chmod 400 /etc/filebeat/certs/*
 chown -R root:root /etc/filebeat/certs
 
 # Deploy dashboard certificates
 mkdir -p /etc/wazuh-dashboard/certs
-tar -xf ./wazuh-certificates.tar -C /etc/wazuh-dashboard/certs/ \
-    ./dashboard.pem ./dashboard-key.pem ./root-ca.pem
+cp "$CERTS/dashboard.pem"     /etc/wazuh-dashboard/certs/dashboard.pem
+cp "$CERTS/dashboard-key.pem" /etc/wazuh-dashboard/certs/dashboard-key.pem
+cp "$CERTS/root-ca.pem"       /etc/wazuh-dashboard/certs/root-ca.pem
 chmod 500 /etc/wazuh-dashboard/certs
 chmod 400 /etc/wazuh-dashboard/certs/*
 chown -R wazuh-dashboard:wazuh-dashboard /etc/wazuh-dashboard/certs
