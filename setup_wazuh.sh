@@ -206,30 +206,54 @@ chmod 500 /etc/wazuh-dashboard/certs
 chmod 400 /etc/wazuh-dashboard/certs/*
 chown -R wazuh-dashboard:wazuh-dashboard /etc/wazuh-dashboard/certs
 
-# Configure indexer: bind address + single-node mode (prevents cluster election instability)
-NODE_IP="10.10.0.1"
-sed -i "s/0.0.0.0/$NODE_IP/" /etc/wazuh-indexer/opensearch.yml
-grep -q "discovery.type" /etc/wazuh-indexer/opensearch.yml \
-    || printf '\ndiscovery.type: single-node\n' >> /etc/wazuh-indexer/opensearch.yml
+# Configure indexer: set bind address and single-node mode
+# Python handles this safely regardless of trailing-newline state in the file
+python3 - << 'PYEOF'
+import re, sys
+path = '/etc/wazuh-indexer/opensearch.yml'
+try:
+    content = open(path).read()
+except Exception as e:
+    sys.exit(f"Cannot read {path}: {e}")
+# Set network host
+content = re.sub(r'network\.host:.*', 'network.host: "10.10.0.1"', content)
+# Add single-node discovery (strip trailing newlines first to avoid joining lines)
+if 'discovery.type' not in content:
+    content = content.rstrip('\n') + '\ndiscovery.type: single-node\n'
+open(path, 'w').write(content)
+print("opensearch.yml configured")
+PYEOF
+
+# Sanity-check the result before attempting to start
+grep -q "^discovery\.type: single-node" /etc/wazuh-indexer/opensearch.yml || {
+    echo "ERROR: opensearch.yml misconfigured. Contents:"
+    cat /etc/wazuh-indexer/opensearch.yml
+    exit 1
+}
 
 systemctl daemon-reload
 systemctl enable wazuh-indexer
-systemctl start wazuh-indexer
+systemctl start wazuh-indexer || {
+    echo "ERROR: wazuh-indexer failed to start. Last 40 log lines:"
+    journalctl -u wazuh-indexer --no-pager -n 40
+    exit 1
+}
 
 info "Waiting for indexer to be ready (this takes 2-4 minutes)..."
 TRIES=0
 until curl -sk -o /dev/null -w "%{http_code}" https://10.10.0.1:9200 | grep -qE "^[0-9]"; do
     TRIES=$((TRIES + 1))
-    if [ $TRIES -ge 48 ]; then
-        warn "Indexer did not respond after 4 minutes — continuing anyway"
-        break
+    if [ $TRIES -ge 60 ]; then
+        echo "ERROR: indexer did not respond after 5 minutes."
+        journalctl -u wazuh-indexer --no-pager -n 40
+        exit 1
     fi
     sleep 5
 done
-# Give it 10 more seconds to fully settle before running security init
 sleep 10
 info "Running indexer security initialisation..."
-/usr/share/wazuh-indexer/bin/indexer-security-init.sh || warn "Security init returned non-zero — may already be initialised"
+/usr/share/wazuh-indexer/bin/indexer-security-init.sh \
+    || warn "Security init returned non-zero — may already be initialised"
 
 # Configure manager
 sed -i "s/<address>.*<\/address>/<address>0.0.0.0<\/address>/" /var/ossec/etc/ossec.conf
