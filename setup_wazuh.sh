@@ -210,7 +210,7 @@ chown -R wazuh-dashboard:wazuh-dashboard /etc/wazuh-dashboard/certs
 NODE_IP="10.10.0.1"
 sed -i "s/0.0.0.0/$NODE_IP/" /etc/wazuh-indexer/opensearch.yml
 grep -q "discovery.type" /etc/wazuh-indexer/opensearch.yml \
-    || echo "discovery.type: single-node" >> /etc/wazuh-indexer/opensearch.yml
+    || printf '\ndiscovery.type: single-node\n' >> /etc/wazuh-indexer/opensearch.yml
 
 systemctl daemon-reload
 systemctl enable wazuh-indexer
