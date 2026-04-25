@@ -265,11 +265,22 @@ info "Running indexer security initialisation..."
     || warn "Security init returned non-zero — may already be initialised"
 
 info "Setting Wazuh admin password to Wazuh-Purple1..."
-curl -sSO https://packages.wazuh.com/4.7/wazuh-passwords-tool.sh
-bash wazuh-passwords-tool.sh -u admin -p Wazuh-Purple1 || {
-    echo "ERROR: Failed to set admin password."
+# Use the admin TLS certificate to authenticate — more reliable than wazuh-passwords-tool.sh
+CHANGE_RESULT=$(curl -sk \
+    --cert /etc/wazuh-indexer/certs/admin.pem \
+    --key /etc/wazuh-indexer/certs/admin-key.pem \
+    -XPUT "https://10.10.0.1:9200/_plugins/_security/api/internalusers/admin" \
+    -H 'Content-Type: application/json' \
+    -d '{"password":"Wazuh-Purple1","backend_roles":["admin"]}')
+echo "$CHANGE_RESULT" | grep -q '"status":"OK"' || {
+    echo "ERROR: Failed to set admin password. Response: $CHANGE_RESULT"
     exit 1
 }
+info "Admin password set successfully."
+
+info "Configuring dashboard credentials..."
+sed -i 's|#\?opensearch\.username:.*|opensearch.username: admin|' /etc/wazuh-dashboard/opensearch_dashboards.yml
+sed -i 's|#\?opensearch\.password:.*|opensearch.password: Wazuh-Purple1|' /etc/wazuh-dashboard/opensearch_dashboards.yml
 
 info "Configuring Filebeat..."
 curl -sSo /etc/filebeat/filebeat.yml \
