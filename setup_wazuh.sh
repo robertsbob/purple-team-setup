@@ -206,6 +206,11 @@ chmod 500 /etc/wazuh-dashboard/certs
 chmod 400 /etc/wazuh-dashboard/certs/*
 chown -R wazuh-dashboard:wazuh-dashboard /etc/wazuh-dashboard/certs
 
+# Point dashboard at the indexer (bound to 10.10.0.1, not 127.0.0.1)
+sed -i 's|opensearch.hosts:.*|opensearch.hosts: ["https://10.10.0.1:9200"]|' /etc/wazuh-dashboard/opensearch_dashboards.yml
+grep -q "opensearch.hosts" /etc/wazuh-dashboard/opensearch_dashboards.yml || \
+    echo 'opensearch.hosts: ["https://10.10.0.1:9200"]' >> /etc/wazuh-dashboard/opensearch_dashboards.yml
+
 # Configure indexer: set bind address and single-node mode
 # Python handles this safely regardless of trailing-newline state in the file
 python3 - << 'PYEOF'
