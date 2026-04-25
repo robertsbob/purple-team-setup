@@ -267,9 +267,9 @@ info "Running indexer security initialisation..."
 /usr/share/wazuh-indexer/bin/indexer-security-init.sh \
     || warn "Security init returned non-zero — may already be initialised"
 
-info "Setting Wazuh admin password to SecretPassword..."
+info "Setting Wazuh admin password to Wazuh-Purple1..."
 curl -sO https://packages.wazuh.com/4.7/wazuh-passwords-tool.sh
-bash wazuh-passwords-tool.sh -u admin -p SecretPassword || {
+bash wazuh-passwords-tool.sh -u admin -p Wazuh-Purple1 || {
     echo "ERROR: Failed to set admin password."
     exit 1
 }
@@ -475,7 +475,7 @@ echo -e "${GREEN}  Wazuh + WireGuard setup complete!${NC}"
 echo -e "${GREEN}============================================================${NC}"
 echo ""
 echo -e "${GREEN}  Wazuh dashboard:${NC}  https://10.10.0.1"
-echo -e "${GREEN}  Wazuh login:${NC}      admin / SecretPassword  (change after first login)"
+echo -e "${GREEN}  Wazuh login:${NC}      admin / Wazuh-Purple1  (change after first login)"
 echo ""
 echo -e "${GREEN}  WireGuard configs written to:${NC}"
 echo "    /root/wg_configs_output/target_wg0.conf      ← copy to target machine"
