@@ -3,12 +3,14 @@
 # Run as root on a fresh Ubuntu 24.04 LTS Hetzner VPS
 # This machine acts as both the Wazuh manager and WireGuard VPN server.
 
-set -e
+set -euo pipefail
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 info()   { echo -e "${GREEN}[*]${NC} $1"; }
 warn()   { echo -e "${YELLOW}[!]${NC} $1"; }
 prompt() { echo -e "${YELLOW}[?]${NC} $1"; }
+
+trap 'echo -e "\n${RED}[ERROR]${NC} Script aborted at line $LINENO — command: $BASH_COMMAND" >&2' ERR
 
 if [[ $EUID -ne 0 ]]; then echo "Run as root." && exit 1; fi
 
@@ -22,8 +24,8 @@ echo ""
 info "Starting setup..."
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq curl wget gnupg2 wireguard iptables iptables-persistent net-tools
+apt-get update -q
+apt-get install -y -q curl wget gnupg2 wireguard iptables iptables-persistent net-tools
 
 # ── WireGuard VPN setup ──────────────────────────────────────────────────────
 info "Setting up WireGuard VPN server..."
@@ -130,17 +132,17 @@ echo ""
 # ── Wazuh manager install ────────────────────────────────────────────────────
 info "Installing Wazuh components (this takes several minutes)..."
 
-curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
+curl -sSf https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
 echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" \
     > /etc/apt/sources.list.d/wazuh.list
-apt-get update -qq
+apt-get update -q
 apt-get install -y wazuh-manager filebeat wazuh-indexer wazuh-dashboard
 
 # Run Wazuh installer certificates generation
 info "Generating Wazuh certificates..."
 rm -rf ./wazuh-certificates ./wazuh-certificates.tar
-curl -sO https://packages.wazuh.com/4.7/wazuh-certs-tool.sh
-curl -sO https://packages.wazuh.com/4.7/config.yml
+curl -sSO https://packages.wazuh.com/4.7/wazuh-certs-tool.sh
+curl -sSO https://packages.wazuh.com/4.7/config.yml
 
 # Patch config.yml for single-node with this server's IP
 cat > config.yml << EOF
@@ -261,14 +263,14 @@ info "Running indexer security initialisation..."
     || warn "Security init returned non-zero — may already be initialised"
 
 info "Setting Wazuh admin password to Wazuh-Purple1..."
-curl -sO https://packages.wazuh.com/4.7/wazuh-passwords-tool.sh
+curl -sSO https://packages.wazuh.com/4.7/wazuh-passwords-tool.sh
 bash wazuh-passwords-tool.sh -u admin -p Wazuh-Purple1 || {
     echo "ERROR: Failed to set admin password."
     exit 1
 }
 
 info "Configuring Filebeat..."
-curl -so /etc/filebeat/filebeat.yml \
+curl -sSo /etc/filebeat/filebeat.yml \
     https://packages.wazuh.com/4.7/tpl/wazuh/filebeat/filebeat.yml
 # Point at indexer on WireGuard IP
 sed -i 's|hosts:.*9200.*|hosts: ["https://10.10.0.1:9200"]|' /etc/filebeat/filebeat.yml
@@ -279,7 +281,7 @@ printf 'admin'         | filebeat keystore add username --stdin --force
 printf 'Wazuh-Purple1' | filebeat keystore add password --stdin --force
 
 # Install Wazuh filebeat module
-curl -s https://packages.wazuh.com/4.x/filebeat/wazuh-filebeat-0.4.tar.gz \
+curl -sSf https://packages.wazuh.com/4.x/filebeat/wazuh-filebeat-0.4.tar.gz \
     | tar -xvz -C /usr/share/filebeat/module
 
 # Set up index management (requires indexer up with correct creds)

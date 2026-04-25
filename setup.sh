@@ -5,13 +5,15 @@
 # and configures everything needed for the environment.
 # At the end it deletes itself and the cloned repo.
 
-set -e
+set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 info()    { echo -e "${GREEN}[*]${NC} $1"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
 prompt()  { echo -e "${YELLOW}[?]${NC} $1"; }
+
+trap 'echo -e "\n${RED}[ERROR]${NC} Script aborted at line $LINENO — command: $BASH_COMMAND" >&2' ERR
 
 if [[ $EUID -ne 0 ]]; then
     echo "Run as root." && exit 1
@@ -53,12 +55,12 @@ info "Starting setup..."
 # ── System update ────────────────────────────────────────────────────────────
 info "Updating system packages..."
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get upgrade -y -qq
+apt-get update -q
+apt-get upgrade -y -q
 
 # ── Install packages ─────────────────────────────────────────────────────────
 info "Installing packages..."
-apt-get install -y -qq \
+apt-get install -y -q \
     nginx \
     php8.3 php8.3-fpm php8.3-mysql php8.3-curl php8.3-mbstring php8.3-xml php8.3-zip \
     mysql-server \
@@ -76,7 +78,7 @@ apt-get install -y -qq \
 
 if [[ "$ENABLE_GUI" =~ ^[Yy] ]]; then
     info "Installing desktop and VNC packages..."
-    apt-get install -y -qq \
+    apt-get install -y -q \
         tigervnc-standalone-server tigervnc-common \
         xfce4 xfce4-terminal
 fi
@@ -431,11 +433,11 @@ fi
 
 # ── Wazuh agent ──────────────────────────────────────────────────────────────
 info "Installing Wazuh agent..."
-curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
+curl -sSf https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
 echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" \
     > /etc/apt/sources.list.d/wazuh.list
-apt-get update -qq
-WAZUH_MANAGER="$WAZUH_IP" apt-get install -y -qq wazuh-agent
+apt-get update -q
+WAZUH_MANAGER="$WAZUH_IP" apt-get install -y -q wazuh-agent
 
 cp "$REPO_DIR/target/configs/wazuh_ossec.conf" /var/ossec/etc/ossec.conf
 sed -i "s/WAZUH_SERVER_IP/$WAZUH_IP/g" /var/ossec/etc/ossec.conf
