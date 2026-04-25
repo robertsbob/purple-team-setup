@@ -217,8 +217,8 @@ except Exception as e:
     sys.exit(f"Cannot read {path}: {e}")
 # Set network host
 content = re.sub(r'network\.host:.*', 'network.host: "10.10.0.1"', content)
-# Remove cluster.initial_master_nodes — incompatible with discovery.type: single-node
-content = re.sub(r'^\s*cluster\.initial_master_nodes:.*\n?', '', content, flags=re.MULTILINE)
+# Remove cluster.initial_master_nodes AND its list items — incompatible with discovery.type: single-node
+content = re.sub(r'^[ \t]*cluster\.initial_master_nodes:[^\n]*\n?(?:[ \t]*-[^\n]*\n?)*', '', content, flags=re.MULTILINE)
 # Add single-node discovery (strip trailing newlines first to avoid joining lines)
 if 'discovery.type' not in content:
     content = content.rstrip('\n') + '\ndiscovery.type: single-node\n'
