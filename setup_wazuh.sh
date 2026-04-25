@@ -286,17 +286,6 @@ printf 'Wazuh-Purple1' | filebeat keystore add password --stdin --force
 curl -sSf https://packages.wazuh.com/4.x/filebeat/wazuh-filebeat-0.4.tar.gz \
     | tar -xvz -C /usr/share/filebeat/module
 
-# Set up index management (requires indexer up with correct creds)
-filebeat setup --index-management \
-    -E output.logstash.enabled=false \
-    -E 'output.elasticsearch.hosts=["https://10.10.0.1:9200"]' \
-    -E output.elasticsearch.ssl.certificate_authorities=/etc/filebeat/certs/root-ca.pem \
-    -E output.elasticsearch.ssl.certificate=/etc/filebeat/certs/filebeat.pem \
-    -E output.elasticsearch.ssl.key=/etc/filebeat/certs/filebeat-key.pem \
-    -E output.elasticsearch.username=admin \
-    -E output.elasticsearch.password=Wazuh-Purple1 \
-    || warn "filebeat setup index-management returned non-zero"
-
 systemctl enable filebeat
 systemctl start filebeat || {
     echo "ERROR: Filebeat failed to start."
