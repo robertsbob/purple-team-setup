@@ -128,20 +128,13 @@ info "  → You will need this when running setup.sh on the target."
 echo ""
 
 # ── Wazuh manager install ────────────────────────────────────────────────────
-info "Installing Wazuh manager (this takes several minutes)..."
+info "Installing Wazuh components (this takes several minutes)..."
 
 curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
 echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" \
     > /etc/apt/sources.list.d/wazuh.list
 apt-get update -qq
-apt-get install -y wazuh-manager
-
-# ── Install Wazuh indexer + dashboard (single-node) ─────────────────────────
-info "Installing Wazuh indexer..."
-apt-get install -y wazuh-indexer
-
-info "Installing Wazuh dashboard..."
-apt-get install -y wazuh-dashboard
+apt-get install -y wazuh-manager filebeat wazuh-indexer wazuh-dashboard
 
 # Run Wazuh installer certificates generation
 info "Generating Wazuh certificates..."
@@ -274,7 +267,32 @@ bash wazuh-passwords-tool.sh -u admin -p Wazuh-Purple1 || {
     exit 1
 }
 
-info "Starting Filebeat..."
+info "Configuring Filebeat..."
+curl -so /etc/filebeat/filebeat.yml \
+    https://packages.wazuh.com/4.7/tpl/wazuh/filebeat/filebeat.yml
+# Point at indexer on WireGuard IP
+sed -i 's|hosts:.*9200.*|hosts: ["https://10.10.0.1:9200"]|' /etc/filebeat/filebeat.yml
+
+# Store credentials in filebeat keystore
+filebeat keystore create --force
+printf 'admin'         | filebeat keystore add username --stdin --force
+printf 'Wazuh-Purple1' | filebeat keystore add password --stdin --force
+
+# Install Wazuh filebeat module
+curl -s https://packages.wazuh.com/4.x/filebeat/wazuh-filebeat-0.4.tar.gz \
+    | tar -xvz -C /usr/share/filebeat/module
+
+# Set up index management (requires indexer up with correct creds)
+filebeat setup --index-management \
+    -E output.logstash.enabled=false \
+    -E 'output.elasticsearch.hosts=["https://10.10.0.1:9200"]' \
+    -E output.elasticsearch.ssl.certificate_authorities=/etc/filebeat/certs/root-ca.pem \
+    -E output.elasticsearch.ssl.certificate=/etc/filebeat/certs/filebeat.pem \
+    -E output.elasticsearch.ssl.key=/etc/filebeat/certs/filebeat-key.pem \
+    -E output.elasticsearch.username=admin \
+    -E output.elasticsearch.password=Wazuh-Purple1 \
+    || warn "filebeat setup index-management returned non-zero"
+
 systemctl enable filebeat
 systemctl start filebeat || {
     echo "ERROR: Filebeat failed to start."
