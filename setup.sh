@@ -28,12 +28,15 @@ read -r TARGET_WG_IP; TARGET_WG_IP="${TARGET_WG_IP:-10.10.0.2}"
 
 prompt "Enter the WireGuard server public IP (Wazuh machine):"
 read -r WG_SERVER_IP
+[[ -z "$WG_SERVER_IP" ]] && { echo "ERROR: WireGuard server IP is required." >&2; exit 1; }
 
 prompt "Enter the WireGuard server public key (printed at end of setup_wazuh.sh output):"
 read -r WG_SERVER_PUBKEY
+[[ -z "$WG_SERVER_PUBKEY" ]] && { echo "ERROR: WireGuard server public key is required." >&2; exit 1; }
 
 prompt "Enter the WireGuard private key for this machine (printed at end of setup_wazuh.sh output):"
 read -r WG_PRIV_KEY
+[[ -z "$WG_PRIV_KEY" ]] && { echo "ERROR: WireGuard private key is required." >&2; exit 1; }
 
 prompt "Enter the OpenRouter API key (leave blank to skip — AI agent will show unavailable message):"
 read -r OPENROUTER_KEY
@@ -90,7 +93,7 @@ usermod -aG sudo grizzyadmin
 
 # Generate SSH key for blue team
 mkdir -p /root/setup_output
-ssh-keygen -t ed25519 -f /root/setup_output/blue_team_ssh_key -N "" -C "blueteam@grizzygourmetgrub" 2>/dev/null
+ssh-keygen -t ed25519 -f /root/setup_output/blue_team_ssh_key -N "" -C "blueteam@grizzygourmetgrub"
 mkdir -p /home/grizzyadmin/.ssh
 cat /root/setup_output/blue_team_ssh_key.pub >> /home/grizzyadmin/.ssh/authorized_keys
 chmod 700 /home/grizzyadmin/.ssh
@@ -271,7 +274,7 @@ for filename, title, subtitle, top, bot in cards:
 PYEOF
 
 # Inject OpenRouter key into .env
-sed -i "s/^OPENROUTER_KEY=.*/OPENROUTER_KEY=$OPENROUTER_KEY/" /var/www/grizzy/public/.env
+sed -i "s|^OPENROUTER_KEY=.*|OPENROUTER_KEY=$OPENROUTER_KEY|" /var/www/grizzy/public/.env
 
 # Set ownership
 chown -R www-data:www-data /var/www/grizzy
@@ -318,7 +321,7 @@ chown -R gary:gary /opt/grizzy/internal
 
 cd /opt/grizzy/internal
 python3 -m venv venv
-venv/bin/pip install -q -r requirements.txt
+venv/bin/pip install -r requirements.txt
 cd "$REPO_DIR"
 
 # systemd service for internal dashboard

@@ -19,6 +19,7 @@ echo "========================================="
 
 prompt "Enter this machine's IP address (public or local — used as the WireGuard endpoint):"
 read -r PUBLIC_IP
+[[ -z "$PUBLIC_IP" ]] && { echo "ERROR: IP address cannot be empty." >&2; exit 1; }
 
 echo ""
 info "Starting setup..."
@@ -47,7 +48,8 @@ BLUE_PRIV=$(wg genkey)
 BLUE_PUB=$(echo "$BLUE_PRIV" | wg pubkey)
 
 # Detect primary network interface
-PRIMARY_IF=$(ip route | grep default | awk '{print $5}' | head -1)
+PRIMARY_IF=$(ip route show default | awk '{print $5; exit}')
+[[ -z "$PRIMARY_IF" ]] && { echo "ERROR: Could not detect primary network interface." >&2; exit 1; }
 info "Primary interface: $PRIMARY_IF"
 
 # Write server config
@@ -136,7 +138,7 @@ curl -sSf https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/s
 echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" \
     > /etc/apt/sources.list.d/wazuh.list
 apt-get update -q
-apt-get install -y wazuh-manager filebeat wazuh-indexer wazuh-dashboard
+apt-get install -y -q wazuh-manager filebeat wazuh-indexer wazuh-dashboard
 
 # Run Wazuh installer certificates generation
 info "Generating Wazuh certificates..."
@@ -248,7 +250,7 @@ systemctl start wazuh-indexer || {
 
 info "Waiting for indexer to be ready (this takes 2-4 minutes)..."
 TRIES=0
-until curl -sk -o /dev/null -w "%{http_code}" https://10.10.0.1:9200 | grep -qE "^[0-9]"; do
+until curl -sk -o /dev/null -w "%{http_code}" https://10.10.0.1:9200 | grep -qE "^[1-9][0-9][0-9]"; do
     TRIES=$((TRIES + 1))
     if [ $TRIES -ge 60 ]; then
         echo "ERROR: indexer did not respond after 5 minutes."
@@ -475,8 +477,11 @@ systemctl restart wazuh-manager
 # ── Dashboard startup ─────────────────────────────────────────────────────────
 info "Starting Wazuh dashboard (may take a minute to become ready)..."
 systemctl enable wazuh-dashboard
-systemctl start wazuh-dashboard
-# Dashboard takes ~90s to fully load after start — this is normal
+systemctl start wazuh-dashboard || {
+    echo "ERROR: wazuh-dashboard failed to start. Last 20 log lines:"
+    journalctl -u wazuh-dashboard --no-pager -n 20
+    exit 1
+}
 sleep 15
 
 # ── Firewall for Wazuh server ────────────────────────────────────────────────
