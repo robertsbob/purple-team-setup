@@ -267,6 +267,21 @@ info "Running indexer security initialisation..."
 /usr/share/wazuh-indexer/bin/indexer-security-init.sh \
     || warn "Security init returned non-zero — may already be initialised"
 
+info "Setting Wazuh admin password to SecretPassword..."
+curl -sO https://packages.wazuh.com/4.7/wazuh-passwords-tool.sh
+bash wazuh-passwords-tool.sh -u admin -p SecretPassword || {
+    echo "ERROR: Failed to set admin password."
+    exit 1
+}
+
+info "Starting Filebeat..."
+systemctl enable filebeat
+systemctl start filebeat || {
+    echo "ERROR: Filebeat failed to start."
+    journalctl -u filebeat --no-pager -n 20
+    exit 1
+}
+
 # Configure manager
 sed -i "s/<address>.*<\/address>/<address>0.0.0.0<\/address>/" /var/ossec/etc/ossec.conf
 
