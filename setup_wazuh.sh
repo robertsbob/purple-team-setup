@@ -217,6 +217,8 @@ except Exception as e:
     sys.exit(f"Cannot read {path}: {e}")
 # Set network host
 content = re.sub(r'network\.host:.*', 'network.host: "10.10.0.1"', content)
+# Remove cluster.initial_master_nodes — incompatible with discovery.type: single-node
+content = re.sub(r'^\s*cluster\.initial_master_nodes:.*\n?', '', content, flags=re.MULTILINE)
 # Add single-node discovery (strip trailing newlines first to avoid joining lines)
 if 'discovery.type' not in content:
     content = content.rstrip('\n') + '\ndiscovery.type: single-node\n'
@@ -227,6 +229,11 @@ PYEOF
 # Sanity-check the result before attempting to start
 grep -q "^discovery\.type: single-node" /etc/wazuh-indexer/opensearch.yml || {
     echo "ERROR: opensearch.yml misconfigured. Contents:"
+    cat /etc/wazuh-indexer/opensearch.yml
+    exit 1
+}
+grep -q "cluster\.initial_master_nodes" /etc/wazuh-indexer/opensearch.yml && {
+    echo "ERROR: cluster.initial_master_nodes still present — incompatible with single-node. Contents:"
     cat /etc/wazuh-indexer/opensearch.yml
     exit 1
 }
