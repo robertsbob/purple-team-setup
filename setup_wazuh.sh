@@ -264,6 +264,9 @@ info "Running indexer security initialisation..."
 /usr/share/wazuh-indexer/bin/indexer-security-init.sh \
     || warn "Security init returned non-zero — may already be initialised"
 
+info "Waiting for security plugin to finish loading config..."
+sleep 30
+
 info "Setting Wazuh admin password to Wazuh-Purple1..."
 # Use the admin TLS certificate to authenticate — more reliable than wazuh-passwords-tool.sh
 CHANGE_RESULT=$(curl -sk \
