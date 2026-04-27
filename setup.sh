@@ -55,6 +55,17 @@ read -r WAZUH_IP; WAZUH_IP="${WAZUH_IP:-10.10.0.1}"
 echo ""
 info "Starting setup..."
 
+# Sync clock — stale clock after VM snapshot restore causes apt to reject repo timestamps
+info "Syncing system clock..."
+timedatectl set-ntp true
+systemctl restart systemd-timesyncd 2>/dev/null || true
+for i in $(seq 1 12); do
+    timedatectl status | grep -q "synchronized: yes" && break
+    sleep 5
+done
+timedatectl status | grep -q "synchronized: yes" \
+    || warn "Clock may not be fully synced — continuing anyway"
+
 # ── System update ────────────────────────────────────────────────────────────
 info "Updating system packages..."
 export DEBIAN_FRONTEND=noninteractive
