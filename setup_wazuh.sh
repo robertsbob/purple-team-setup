@@ -21,6 +21,18 @@ prompt "Enter this machine's IP address (public or local — used as the WireGua
 read -r PUBLIC_IP
 [[ -z "$PUBLIC_IP" ]] && { echo "ERROR: IP address cannot be empty." >&2; exit 1; }
 
+prompt "Enter number of red team participants (1-10):"
+read -r N_RED
+if ! [[ "$N_RED" =~ ^[1-9][0-9]*$ ]] || [ "$N_RED" -gt 10 ]; then
+    echo "ERROR: Red team count must be a number between 1 and 10." >&2; exit 1
+fi
+
+prompt "Enter number of blue team participants (1-10):"
+read -r N_BLUE
+if ! [[ "$N_BLUE" =~ ^[1-9][0-9]*$ ]] || [ "$N_BLUE" -gt 10 ]; then
+    echo "ERROR: Blue team count must be a number between 1 and 10." >&2; exit 1
+fi
+
 echo ""
 info "Starting setup..."
 
@@ -45,25 +57,35 @@ info "Setting up WireGuard VPN server..."
 mkdir -p /etc/wireguard
 mkdir -p /root/wg_configs_output
 
-# Generate keys for all peers
+# Generate server and target keys
 SERVER_PRIV=$(wg genkey)
 SERVER_PUB=$(echo "$SERVER_PRIV" | wg pubkey)
 
 TARGET_PRIV=$(wg genkey)
 TARGET_PUB=$(echo "$TARGET_PRIV" | wg pubkey)
 
-RED_PRIV=$(wg genkey)
-RED_PUB=$(echo "$RED_PRIV" | wg pubkey)
+# Generate keys for red team participants
+declare -a RED_PRIVS=()
+declare -a RED_PUBS=()
+for (( i=0; i<N_RED; i++ )); do
+    RED_PRIVS[$i]=$(wg genkey)
+    RED_PUBS[$i]=$(echo "${RED_PRIVS[$i]}" | wg pubkey)
+done
 
-BLUE_PRIV=$(wg genkey)
-BLUE_PUB=$(echo "$BLUE_PRIV" | wg pubkey)
+# Generate keys for blue team participants
+declare -a BLUE_PRIVS=()
+declare -a BLUE_PUBS=()
+for (( i=0; i<N_BLUE; i++ )); do
+    BLUE_PRIVS[$i]=$(wg genkey)
+    BLUE_PUBS[$i]=$(echo "${BLUE_PRIVS[$i]}" | wg pubkey)
+done
 
 # Detect primary network interface
 PRIMARY_IF=$(ip route show default | awk '{print $5; exit}')
 [[ -z "$PRIMARY_IF" ]] && { echo "ERROR: Could not detect primary network interface." >&2; exit 1; }
 info "Primary interface: $PRIMARY_IF"
 
-# Write server config
+# Write server config — base interface block + fixed target peer
 cat > /etc/wireguard/wg0.conf << EOF
 [Interface]
 Address    = 10.10.0.1/24
@@ -77,17 +99,32 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j A
 [Peer]
 PublicKey  = $TARGET_PUB
 AllowedIPs = 10.10.0.2/32
-
-# Red team player
-[Peer]
-PublicKey  = $RED_PUB
-AllowedIPs = 10.10.0.10/32
-
-# Blue team player
-[Peer]
-PublicKey  = $BLUE_PUB
-AllowedIPs = 10.10.0.20/32
 EOF
+
+# Append red team peers (10.10.0.10 – 10.10.0.{9+N_RED})
+for (( i=0; i<N_RED; i++ )); do
+    PEER_IP="10.10.0.$((10 + i))"
+    cat >> /etc/wireguard/wg0.conf << EOF
+
+# Red team player $((i+1))
+[Peer]
+PublicKey  = ${RED_PUBS[$i]}
+AllowedIPs = ${PEER_IP}/32
+EOF
+done
+
+# Append blue team peers (10.10.0.20 – 10.10.0.{19+N_BLUE})
+for (( i=0; i<N_BLUE; i++ )); do
+    PEER_IP="10.10.0.$((20 + i))"
+    cat >> /etc/wireguard/wg0.conf << EOF
+
+# Blue team player $((i+1))
+[Peer]
+PublicKey  = ${BLUE_PUBS[$i]}
+AllowedIPs = ${PEER_IP}/32
+EOF
+done
+
 chmod 600 /etc/wireguard/wg0.conf
 
 # Enable IP forwarding
@@ -110,11 +147,14 @@ AllowedIPs = 10.10.0.0/24
 PersistentKeepalive = 25
 EOF
 
-# Write red team config
-cat > /root/wg_configs_output/redteam_player.conf << EOF
+# Write individual red team configs
+for (( i=0; i<N_RED; i++ )); do
+    PEER_IP="10.10.0.$((10 + i))"
+    PLAYER_NUM=$((i+1))
+    cat > /root/wg_configs_output/redteam_player${PLAYER_NUM}.conf << EOF
 [Interface]
-Address    = 10.10.0.10/24
-PrivateKey = $RED_PRIV
+Address    = ${PEER_IP}/24
+PrivateKey = ${RED_PRIVS[$i]}
 
 [Peer]
 PublicKey  = $SERVER_PUB
@@ -122,12 +162,16 @@ Endpoint   = ${PUBLIC_IP}:51820
 AllowedIPs = 10.10.0.0/24
 PersistentKeepalive = 25
 EOF
+done
 
-# Write blue team config
-cat > /root/wg_configs_output/blueteam_player.conf << EOF
+# Write individual blue team configs
+for (( i=0; i<N_BLUE; i++ )); do
+    PEER_IP="10.10.0.$((20 + i))"
+    PLAYER_NUM=$((i+1))
+    cat > /root/wg_configs_output/blueteam_player${PLAYER_NUM}.conf << EOF
 [Interface]
-Address    = 10.10.0.20/24
-PrivateKey = $BLUE_PRIV
+Address    = ${PEER_IP}/24
+PrivateKey = ${BLUE_PRIVS[$i]}
 
 [Peer]
 PublicKey  = $SERVER_PUB
@@ -135,11 +179,10 @@ Endpoint   = ${PUBLIC_IP}:51820
 AllowedIPs = 10.10.0.0/24
 PersistentKeepalive = 25
 EOF
+done
 
 echo ""
-info "WireGuard configs written to /root/wg_configs_output/"
-info "Target machine public key: $TARGET_PUB"
-info "  → You will need this when running setup.sh on the target."
+info "WireGuard configs written to /root/wg_configs_output/ ($N_RED red, $N_BLUE blue)"
 echo ""
 
 # ── Wazuh manager install ────────────────────────────────────────────────────
@@ -519,14 +562,47 @@ echo ""
 echo -e "${GREEN}  Wazuh dashboard:${NC}  https://10.10.0.1"
 echo -e "${GREEN}  Wazuh login:${NC}      admin / Wazuh-Purple1  (change after first login)"
 echo ""
-echo -e "${GREEN}  WireGuard configs written to:${NC}"
-echo "    /root/wg_configs_output/target_wg0.conf      ← copy to target machine"
-echo "    /root/wg_configs_output/redteam_player.conf  ← give to red team"
-echo "    /root/wg_configs_output/blueteam_player.conf ← give to blue team"
+echo -e "${GREEN}------------------------------------------------------------${NC}"
+echo -e "${GREEN}  Config files on this machine${NC}"
+echo -e "${GREEN}------------------------------------------------------------${NC}"
 echo ""
-echo -e "${GREEN}============================================================${NC}"
+echo "  WireGuard server:"
+echo "    /etc/wireguard/wg0.conf"
+echo ""
+echo "  Wazuh indexer:"
+echo "    /etc/wazuh-indexer/opensearch.yml"
+echo ""
+echo "  Wazuh dashboard:"
+echo "    /etc/wazuh-dashboard/opensearch_dashboards.yml"
+echo ""
+echo "  Filebeat:"
+echo "    /etc/filebeat/filebeat.yml"
+echo "    /etc/filebeat/wazuh-template.json"
+echo ""
+echo "  Wazuh manager:"
+echo "    /var/ossec/etc/ossec.conf"
+echo "    /var/ossec/etc/rules/grizzy_rules.xml"
+echo ""
+echo -e "${GREEN}------------------------------------------------------------${NC}"
+echo -e "${GREEN}  WireGuard configs to distribute to participants${NC}"
+echo -e "${GREEN}------------------------------------------------------------${NC}"
+echo ""
+echo "  Target machine:"
+echo "    /root/wg_configs_output/target_wg0.conf                → 10.10.0.2"
+echo ""
+echo "  Red team ($N_RED player(s)):"
+for (( i=0; i<N_RED; i++ )); do
+    printf "    /root/wg_configs_output/redteam_player%d.conf           → 10.10.0.%d\n" $((i+1)) $((10+i))
+done
+echo ""
+echo "  Blue team ($N_BLUE player(s)):"
+for (( i=0; i<N_BLUE; i++ )); do
+    printf "    /root/wg_configs_output/blueteam_player%d.conf          → 10.10.0.%d\n" $((i+1)) $((20+i))
+done
+echo ""
+echo -e "${GREEN}------------------------------------------------------------${NC}"
 echo -e "${GREEN}  Values to enter when running setup.sh on the target${NC}"
-echo -e "${GREEN}============================================================${NC}"
+echo -e "${GREEN}------------------------------------------------------------${NC}"
 echo ""
 echo "  Prompt: Target WireGuard IP"
 echo "  Answer: 10.10.0.2  (just press Enter for default)"
@@ -549,6 +625,6 @@ echo ""
 echo "  Prompt: Wazuh manager IP"
 echo "  Answer: 10.10.0.1  (just press Enter for default)"
 echo ""
-echo -e "${YELLOW}  Tip: the target WireGuard config is also pre-written at:${NC}"
+echo -e "${YELLOW}  Tip: the target WireGuard config is also at:${NC}"
 echo "       /root/wg_configs_output/target_wg0.conf"
-echo "       (contains the private key above — copy it to the target machine)"
+echo "       (copy this file to the target machine — it contains the private key above)"
