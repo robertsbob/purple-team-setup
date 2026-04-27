@@ -301,6 +301,9 @@ curl -sSo /etc/filebeat/filebeat.yml \
     https://packages.wazuh.com/4.7/tpl/wazuh/filebeat/filebeat.yml
 # Point at indexer on WireGuard IP
 sed -i 's|hosts:.*9200.*|hosts: ["https://10.10.0.1:9200"]|' /etc/filebeat/filebeat.yml
+# Download the index template referenced by filebeat.yml
+curl -sSo /etc/filebeat/wazuh-template.json \
+    https://raw.githubusercontent.com/wazuh/wazuh/v4.7.5/extensions/elasticsearch/7.x/wazuh-template.json
 
 # Store credentials in filebeat keystore
 filebeat keystore create --force
