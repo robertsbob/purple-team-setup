@@ -314,8 +314,7 @@ chmod 775 /opt/grizzy/scripts
 # ── Compile and install backup utility ──────────────────────────────────────
 info "Compiling and installing backup utility..."
 gcc -o /usr/local/bin/grizzbackup "$REPO_DIR/target/scripts/backup.c"
-chmod u+s /usr/local/bin/grizzbackup
-chmod 755 /usr/local/bin/grizzbackup
+chmod 4755 /usr/local/bin/grizzbackup
 info "Backup utility installed."
 
 # ── Cron job ─────────────────────────────────────────────────────────────────
@@ -333,6 +332,8 @@ chown -R gary:gary /opt/grizzy/internal
 cd /opt/grizzy/internal
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
+# Also install to system python3 — scripts invoked via os.system() use system interpreter, not venv
+pip3 install mysql-connector-python -q
 cd "$REPO_DIR"
 
 # systemd service for internal dashboard
