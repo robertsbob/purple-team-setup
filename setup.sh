@@ -333,7 +333,8 @@ cd /opt/grizzy/internal
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
 # Also install to system python3 — scripts invoked via os.system() use system interpreter, not venv
-pip3 install mysql-connector-python -q
+# --break-system-packages required on Ubuntu 24.04 (PEP 668)
+pip3 install mysql-connector-python -q --break-system-packages
 cd "$REPO_DIR"
 
 # systemd service for internal dashboard
