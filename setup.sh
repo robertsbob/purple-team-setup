@@ -493,11 +493,17 @@ echo -e "${GREEN}  Setup complete!${NC}"
 echo -e "${GREEN}============================================================${NC}"
 echo ""
 echo "  WireGuard IP (this machine): $TARGET_WG_IP"
-echo "  Blue team SSH key:  /root/setup_output/blue_team_ssh_key"
 if [[ "$ENABLE_GUI" =~ ^[Yy] ]]; then
 echo "  VNC password:       $VNC_PASS  (port 5901)"
 fi
 echo "  Wazuh agent:        reporting to $WAZUH_IP"
+echo ""
+echo -e "${GREEN}------------------------------------------------------------${NC}"
+echo -e "${GREEN}  Blue team SSH private key${NC}"
+echo -e "${GREEN}  Copy this to the Wazuh server or distribute to blue team${NC}"
+echo -e "${GREEN}------------------------------------------------------------${NC}"
+cat /root/setup_output/blue_team_ssh_key
+echo -e "${GREEN}------------------------------------------------------------${NC}"
 echo ""
 echo "  Docs left on machine:"
 echo "    /opt/grizzy/DEV_SERVICES.md"

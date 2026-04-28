@@ -25,7 +25,7 @@ User:  grizzyadmin
 Auth:  SSH key
 ```
 
-Your private key is at `/root/blue_team_ssh_key` on the Wazuh server.
+Your private key was printed at the end of the target setup script output. The operator will provide it to you directly.
 
 ```bash
 ssh -i /path/to/blue_team_ssh_key grizzyadmin@10.10.0.2
