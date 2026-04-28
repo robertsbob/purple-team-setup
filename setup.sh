@@ -168,6 +168,14 @@ info "Database created and seeded."
 info "Configuring Redis..."
 cp "$REPO_DIR/target/configs/redis.conf" /etc/redis/redis.conf
 chown redis:redis /etc/redis/redis.conf
+# Remove systemd sandbox restrictions so redis can write to arbitrary paths
+mkdir -p /etc/systemd/system/redis-server.service.d
+cat > /etc/systemd/system/redis-server.service.d/exercise.conf << 'EOF'
+[Service]
+PrivateTmp=false
+ReadWritePaths=
+EOF
+systemctl daemon-reload
 systemctl enable redis-server
 systemctl restart redis-server
 
@@ -477,7 +485,6 @@ systemctl restart auditd
 # ── Copy docs to machine ──────────────────────────────────────────────────────
 info "Installing documentation..."
 cp "$REPO_DIR/DEV_SERVICES.md"  /opt/grizzy/DEV_SERVICES.md
-cp "$REPO_DIR/BLUE_ACCESS.md"   /root/BLUE_ACCESS.md
 cp "$REPO_DIR/WAZUH.md"         /root/WAZUH.md
 
 # ── Clean up ──────────────────────────────────────────────────────────────────
@@ -507,7 +514,6 @@ echo -e "${GREEN}------------------------------------------------------------${N
 echo ""
 echo "  Docs left on machine:"
 echo "    /opt/grizzy/DEV_SERVICES.md"
-echo "    /root/BLUE_ACCESS.md"
 echo "    /root/WAZUH.md"
 echo ""
 warn "Deleting cloned repository..."

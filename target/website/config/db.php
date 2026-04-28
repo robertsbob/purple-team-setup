@@ -11,7 +11,7 @@ define('UPLOAD_DIR', __DIR__ . '/../public/uploads/');
 define('UPLOAD_URL', '/uploads/');
 
 define('OPENROUTER_KEY', getenv('OPENROUTER_KEY') ?: '');
-define('OPENROUTER_MODEL', 'meta-llama/llama-3-8b-instruct');
+define('OPENROUTER_MODEL', getenv('OPENROUTER_MODEL') ?: 'meta-llama/llama-3-8b-instruct');
 
 function get_db() {
     static $conn = null;

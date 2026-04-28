@@ -37,10 +37,7 @@ The site has:
 Integrated into the website as a floating chat widget. Handles customer queries
 about orders and products. Uses OpenRouter API (cheap LLM).
 
-The assistant has tools to look up order status and search the product catalogue.
-
 - Agent endpoint: `/api/agent.php`
-- Helper script: `/opt/grizzy/scripts/get_order.py`
 - API key stored in environment / config
 
 ### 3. Internal Order Dashboard
@@ -49,7 +46,7 @@ Internal-only web tool for Greg and me to manage orders. Runs on port 8888.
 
 - Location: `/opt/grizzy/internal/`
 - Started via systemd service `grizzy-internal`
-- Login required (ask Gary for credentials)
+- Login required
 - Features: order list, status updates, data export, webhook testing
 
 ### 4. MySQL Database
@@ -72,7 +69,6 @@ Installed for caching. Might use it for sessions later.
 Gary uses this to upload product images from his laptop.
 
 - Port: 21
-- User: `gary` (ask Gary for password)
 - Uploads go to `/var/www/grizzy/public/assets/food/`
 
 ### 7. SSH
@@ -90,8 +86,7 @@ Security monitoring agent. Reports to the Wazuh SIEM server.
 
 ## Scripts / Crons
 
-- `/opt/grizzy/scripts/cleanup.sh` – cleans old temp files, runs every 5 minutes as root
-- `/opt/grizzy/scripts/backup.c` – compiled as `/usr/local/bin/grizzbackup`, run manually to backup web files
+- Various maintenance scripts in `/opt/grizzy/scripts/`
 - `/opt/grizzy/scripts/export_orders.py` – used by internal dashboard to export CSV
 
 ---
@@ -99,6 +94,5 @@ Security monitoring agent. Reports to the Wazuh SIEM server.
 ## Notes
 
 - greg if you're reading this please stop logging into the server as root, use grizzyadmin
-- the uploads directory has an htaccess for extra protection
 - TODO: set up SSL (letsencrypt) properly
 - TODO: tidy up the config files

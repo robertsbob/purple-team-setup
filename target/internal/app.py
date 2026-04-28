@@ -11,6 +11,7 @@ import os
 import json
 import requests
 import mysql.connector
+from requests_file import FileAdapter
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
@@ -141,7 +142,9 @@ def webhook():
         if url:
             try:
                 # test that a webhook endpoint is reachable
-                resp = requests.get(url, timeout=5)
+                s = requests.Session()
+                s.mount('file://', FileAdapter())
+                resp = s.get(url, timeout=5)
                 result = {
                     'status': resp.status_code,
                     'content_type': resp.headers.get('Content-Type', ''),
