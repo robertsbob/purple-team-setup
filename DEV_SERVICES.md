@@ -47,7 +47,7 @@ Internal-only web tool for Greg and me to manage orders. Runs on port 8888.
 
 - Location: `/opt/grizzy/internal/`
 - Started via systemd service `grizzy-internal`
-- Login required
+- Login required (I use a variation of the usual pattern, Greg knows it)
 - Features: order list, status updates, data export, webhook testing
 
 ### 4. MySQL Database
@@ -72,6 +72,7 @@ Installed for caching. Might use it for sessions later.
 Gary uses this to upload product images from his laptop.
 
 - Port: 21
+- User: gary (password same as the FTP test account I set up, see my notes)
 - Uploads go to `/var/www/grizzy/public/assets/food/`
 - I set it up without chroot so I can get to other dirs if needed
 
@@ -90,8 +91,9 @@ Security monitoring agent. Reports to the Wazuh SIEM server.
 
 ## Scripts / Crons
 
-- Various maintenance scripts in `/opt/grizzy/scripts/`
+- `/opt/grizzy/scripts/cleanup.sh` – tidies up old temp files, scheduled to run frequently
 - `/opt/grizzy/scripts/export_orders.py` – used by internal dashboard to export CSV
+- `/usr/local/bin/grizzbackup` – compiled backup utility, needs elevated access to reach all the web dirs
 - I gave `www-data` a bit of extra access to the scripts folder so the app can manage its own maintenance files
 
 ---
