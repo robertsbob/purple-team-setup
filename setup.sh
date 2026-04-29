@@ -133,7 +133,7 @@ port    = ssh
 filter  = sshd
 maxretry = 5
 bantime  = 10
-findtime = 300
+findtime = 60
 EOF
 systemctl enable fail2ban
 systemctl restart fail2ban
