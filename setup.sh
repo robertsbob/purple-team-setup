@@ -128,11 +128,11 @@ systemctl restart ssh
 info "Configuring fail2ban..."
 cat > /etc/fail2ban/jail.local << 'EOF'
 [sshd]
-enabled = false
+enabled = true
 port    = ssh
 filter  = sshd
 maxretry = 5
-bantime  = 600
+bantime  = 10
 findtime = 300
 EOF
 systemctl enable fail2ban
