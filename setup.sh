@@ -120,7 +120,7 @@ PubkeyAuthentication yes
 PermitRootLogin no
 X11Forwarding no
 AllowUsers grizzyadmin
-MaxAuthTries 3
+MaxAuthTries 6
 EOF
 systemctl restart ssh
 
@@ -128,7 +128,7 @@ systemctl restart ssh
 info "Configuring fail2ban..."
 cat > /etc/fail2ban/jail.local << 'EOF'
 [sshd]
-enabled = true
+enabled = false
 port    = ssh
 filter  = sshd
 maxretry = 5
