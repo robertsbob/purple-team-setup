@@ -173,7 +173,7 @@ mkdir -p /etc/systemd/system/redis-server.service.d
 cat > /etc/systemd/system/redis-server.service.d/exercise.conf << 'EOF'
 [Service]
 PrivateTmp=false
-ReadWritePaths=
+ProtectSystem=false
 EOF
 systemctl daemon-reload
 systemctl enable redis-server
