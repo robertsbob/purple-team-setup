@@ -377,9 +377,11 @@ systemctl restart nginx
 
 # ── PHP-FPM config ───────────────────────────────────────────────────────────
 info "Configuring PHP..."
-# Pass OpenRouter key as environment variable
+# Pass OpenRouter key and model as environment variables to PHP-FPM
+OPENROUTER_MODEL=$(grep '^OPENROUTER_MODEL=' /var/www/grizzy/public/.env | cut -d= -f2)
 cat >> /etc/php/8.3/fpm/pool.d/www.conf << EOF
 env[OPENROUTER_KEY] = "$OPENROUTER_KEY"
+env[OPENROUTER_MODEL] = "$OPENROUTER_MODEL"
 EOF
 systemctl restart php8.3-fpm
 
