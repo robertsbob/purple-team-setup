@@ -39,6 +39,7 @@ about orders and products. Uses OpenRouter API (cheap LLM).
 
 - Agent endpoint: `/api/agent.php`
 - API key stored in environment / config
+- Note: the LLM is pretty flexible with what it'll do if you ask nicely
 
 ### 3. Internal Order Dashboard
 
@@ -56,6 +57,7 @@ Stores all customer, order, and product data.
 - Port: 3306
 - Database: `grizzy_db`
 - App user: `grizzy_app`
+- Note: I opened port 3306 temporarily for remote debugging and haven't closed it yet, meant to do that
 
 ### 5. Redis
 
@@ -63,6 +65,7 @@ Installed for caching. Might use it for sessions later.
 
 - Port: 6379
 - Config: `/etc/redis/redis.conf`
+- Haven't got round to setting auth up, it's behind the app so should be fine
 
 ### 6. FTP (vsftpd)
 
@@ -70,6 +73,7 @@ Gary uses this to upload product images from his laptop.
 
 - Port: 21
 - Uploads go to `/var/www/grizzy/public/assets/food/`
+- I set it up without chroot so I can get to other dirs if needed
 
 ### 7. SSH
 
@@ -88,11 +92,13 @@ Security monitoring agent. Reports to the Wazuh SIEM server.
 
 - Various maintenance scripts in `/opt/grizzy/scripts/`
 - `/opt/grizzy/scripts/export_orders.py` – used by internal dashboard to export CSV
+- I gave `www-data` a bit of extra access to the scripts folder so the app can manage its own maintenance files
 
 ---
 
 ## Notes
 
 - greg if you're reading this please stop logging into the server as root, use grizzyadmin
+- the phpinfo page is still up at /info.php (was debugging env vars), will remove it
 - TODO: set up SSL (letsencrypt) properly
 - TODO: tidy up the config files
